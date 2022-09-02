@@ -32,9 +32,6 @@
           class="btn btn-success qayyed border rounded-circle border-3"
           @click="handleQayyed"
         >
-          <!-- :disabled="
-            !(tempScores.playerOne !== '' && tempScores.playerTwo !== '')
-          " -->
           <i class="bi bi-send icon"></i>
         </button>
       </div>
@@ -45,8 +42,7 @@
           <div class="row justify-content-center">
             <div class="col col-6">
               <input
-                type="number"
-                min="0"
+                type="tel"
                 class="form-control border-0 shadow p-2"
                 v-model="tempScores.playerOne"
                 id="playerOne"
@@ -59,8 +55,7 @@
           <div class="row justify-content-center">
             <div class="col col-6">
               <input
-                type="number"
-                min="0"
+                type="tel"
                 class="form-control border-0 shadow p-2"
                 v-model="tempScores.playerTwo"
                 id="playerTwo"
@@ -140,6 +135,16 @@
       </div>
       <div class="col col-2">
         <button
+          class="btn qayyed rounded-circle"
+          :class="state.show ? 'btn-info' : 'btn-success'"
+          @click="toggleShow"
+        >
+          {{ state.show ? "H" : "S" }}
+        </button>
+      </div>
+
+      <div class="col col-2">
+        <button
           class="btn btn-primary qayyed rounded-circle"
           v-if="!logoutLoading"
           @click="handleLogout"
@@ -166,6 +171,7 @@ import useLogout from "@/composables/useLogout.js";
 import useDocument from "@/composables/useDocument";
 import getDocument from "@/composables/getDocument";
 import { useRouter } from "vue-router";
+import { async } from "@firebase/util";
 export default {
   setup() {
     const router = useRouter();
@@ -188,6 +194,8 @@ export default {
         name: "لهم",
         scores: [],
       },
+      isChanged: false,
+      show: true,
     });
 
     const total = computed(() => {
@@ -223,10 +231,17 @@ export default {
     const updateName = async () => {
       await updateDoc(state.value);
     };
+
+    const toggleShow = async () => {
+      state.value.show = !state.value.show;
+      await updateDoc(state.value);
+    };
     watchEffect(() => {
       if (document.value) {
         state.value.playerOne = document.value.playerOne;
         state.value.playerTwo = document.value.playerTwo;
+        state.value.show = document.value.show;
+        state.value.isChanged = document.value.isChanged;
       }
     });
 
@@ -235,14 +250,9 @@ export default {
       if (!logoutError.value) router.push({ name: "login" });
     };
     const handleDeleteAll = async () => {
-      state.value.playerOne = {
-        name: "لنا",
-        scores: [],
-      };
-      state.value.playerTwo = {
-        name: "لهم",
-        scores: [],
-      };
+      state.value.playerOne.scores = [];
+      state.value.playerTwo.scores = [];
+      state.value.isChanged = false;
       tempScores.value = {
         playerOne: "",
         playerTwo: "",
@@ -265,31 +275,58 @@ export default {
       const Numbers = "0123456789".split("");
       if (
         Numbers.includes(event.key) &&
-        tempScores.value[event.target.id].length < 2
+        tempScores.value[event.target.id].length < 3
       ) {
         ["0", "", "-"].includes(tempScores.value[event.target.id])
           ? (tempScores.value[event.target.id] = event.key)
           : (tempScores.value[event.target.id] += event.key);
       }
     };
+    let currentTimer = null;
+
     const handleQayyed = async () => {
       qayyedError.value = null;
-      if (
-        tempScores.value.playerOne !== "" &&
-        tempScores.value.playerTwo !== ""
-      ) {
-        state.value.playerOne.scores.push(parseInt(tempScores.value.playerOne));
-        state.value.playerTwo.scores.push(parseInt(tempScores.value.playerTwo));
+      tempScores.value.playerOne === ""
+        ? (tempScores.value.playerOne = 0)
+        : null;
+      tempScores.value.playerTwo === ""
+        ? (tempScores.value.playerTwo = 0)
+        : null;
+      let totalP1, totalP2;
+      try {
+        totalP1 = parseInt(tempScores.value.playerOne);
+        totalP2 = parseInt(tempScores.value.playerTwo);
+      } catch (error) {
+        console.log(error);
+        qayyedError.value = "برجاء ادخال ارقام فقط";
+      }
+
+      if (totalP1 <= 300 && totalP2 <= 300 && (totalP1 > 0 || totalP2 > 0)) {
+        state.value.playerOne.scores.push(totalP1);
+        state.value.playerTwo.scores.push(totalP2);
         tempScores.value.playerOne = "";
         tempScores.value.playerTwo = "";
+
+        if (!state.value.isChanged) {
+          state.value.isChanged = true;
+          currentTimer = setTimeout(async () => {
+            state.value.isChanged = false;
+            await updateDoc(state.value);
+          }, 6500);
+        } else {
+          clearTimeout(currentTimer);
+          currentTimer = setTimeout(async () => {
+            state.value.isChanged = false;
+            await updateDoc(state.value);
+          }, 4000);
+        }
         await updateDoc(state.value);
       } else {
-        winner.value !== null
-          ? null
-          : (qayyedError.value = "برجاء ادخال النتيجة للفريقين");
+        qayyedError.value = "برجاء ادخال النتيجة اقل من او تساوى 300";
       }
     };
     return {
+      toggleShow,
       updateName,
       handleLogout,
       logoutError,
@@ -309,7 +346,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .qayyed {
   width: 60px;
   height: 60px;
@@ -351,6 +388,9 @@ export default {
   100% {
     transform: translateX(0px);
   }
+}
+* {
+  font-family: "cairoSemiBold";
 }
 
 .scores-enter-from {

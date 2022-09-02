@@ -80,4 +80,9 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+*{
+  font-family: "cairoSemiBold";
+}
+
+</style>

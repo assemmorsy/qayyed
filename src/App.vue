@@ -4,6 +4,6 @@
 
 <style>
 * {
-  font-family: "CairoNormal";
+  font-family: "arefBold";
 }
 </style>
