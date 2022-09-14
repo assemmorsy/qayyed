@@ -5,15 +5,52 @@
   >
     <div
       v-if="!state.isChanged && winner && showWinner"
-      class="row justify-content-center mt-5"
+      class="position-relative t-5"
     >
+      <!-- <transition appear name="switch" mode="out-in"> -->
       <div
-        class="col col-3 fs-1 bg-dark bg-gradient text-light px-5 pt-2 pb-3 rounded-5 border border-2 border-light"
+        v-if="showWinner"
+        class="winner-row fs-1 bg-warning bg-gradient text-dark pt-2 pb-3 rounded-5 border border-2 border-light"
       >
+        <img
+          style="height: 40px; width: 40px"
+          :src="require(`@/assets/images/1.svg`)"
+        />
+        <img
+          class="mx-2"
+          style="height: 40px; width: 40px"
+          :src="require(`@/assets/images/2.svg`)"
+        />
         الفائز :
-        <span>{{ state[winner].name }}</span>
+        <span class="winnerName">{{ state[winner].name }}</span>
+        <img
+          class="mx-3"
+          style="height: 40px; width: 40px"
+          :src="require(`@/assets/images/3.svg`)"
+        />
+        <img
+          style="height: 40px; width: 40px"
+          :src="require(`@/assets/images/4.svg`)"
+        />
+      </div>
+      <!-- </transition> -->
+      <div class="images">
+        <transition-group
+          appear
+          @before-enter="gameImgBeforeEnter"
+          @enter="gameImgEnter"
+        >
+          <template v-for="x in [...Array(99).keys()]" :key="x">
+            <img
+              class="img-icon position-absolute"
+              :src="require(`@/assets/images/${(x % 4) + 1}.svg`)"
+              :data-indexgame="x"
+            />
+          </template>
+        </transition-group>
       </div>
     </div>
+
     <div v-else>
       <transition appear name="switch" mode="out-in">
         <div
@@ -172,7 +209,6 @@ export default {
   setup() {
     const { error, document: state } = getDocument("game", "1");
     const showWinner = ref(false);
-
     const WiNNING_SCORE = 152;
 
     const total = computed(() => {
@@ -220,7 +256,7 @@ export default {
           showWinner.value = true;
           setTimeout(() => {
             showWinner.value = false;
-          }, 7000);
+          }, 6500);
         }
       }
     });
@@ -237,6 +273,20 @@ export default {
         y: "-50%",
         x: "50%",
         ease: "bounce.out",
+      });
+    };
+
+    const gameImgBeforeEnter = (el) => {
+      el.opacity = 1;
+    };
+    const gameImgEnter = (el) => {
+      gsap.to(el, {
+        duration: 2,
+        opacity: 0,
+        y: `${Math.floor((Math.random() - 0.5) * 1000)}`,
+        x: `${Math.floor((Math.random() - 0.5) * 1000)}`,
+        delay: parseInt(el.dataset.indexgame) * 0.05,
+        rotateZ: `${Math.floor(Math.random() * 360)}`,
       });
     };
 
@@ -277,6 +327,8 @@ export default {
       error,
       state,
       showWinner,
+      gameImgEnter,
+      gameImgBeforeEnter,
       totalScoreBoxBeforeEnter,
       totalScoreBoxEnter,
       scoreBeforeEnter,
@@ -291,6 +343,25 @@ export default {
 </script>
 
 <style scoped>
+.winner-row {
+  position: absolute;
+  top: 50vh;
+  right: 50vw;
+  transform: translateX(50%) translateY(-50%);
+  padding-left: 60px;
+  padding-right: 60px;
+  z-index: 1000;
+}
+
+.img-icon {
+  top: 50vh;
+  right: 50vw;
+  transform: translateX(50%) translateY(-50%);
+  height: 50px;
+  width: 50px;
+}
+.winnerName {
+}
 * {
   background-color: rgba(0, 0, 0, 0);
 }
