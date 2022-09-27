@@ -7,33 +7,33 @@
       v-if="!state.isChanged && winner && showWinner"
       class="position-relative t-5"
     >
-      <!-- <transition appear name="switch" mode="out-in"> -->
-      <div
-        v-if="showWinner"
-        class="winner-row fs-1 bg-warning bg-gradient text-dark pt-2 pb-3 rounded-5 border border-2 border-light"
-      >
-        <img
-          style="height: 40px; width: 40px"
-          :src="require(`@/assets/images/1.svg`)"
-        />
-        <img
-          class="mx-2"
-          style="height: 40px; width: 40px"
-          :src="require(`@/assets/images/2.svg`)"
-        />
-        الفائز :
-        <span class="winnerName">{{ state[winner].name }}</span>
-        <img
-          class="mx-3"
-          style="height: 40px; width: 40px"
-          :src="require(`@/assets/images/3.svg`)"
-        />
-        <img
-          style="height: 40px; width: 40px"
-          :src="require(`@/assets/images/4.svg`)"
-        />
-      </div>
-      <!-- </transition> -->
+      <transition appear name="toggle" mode="out-in">
+        <div
+          v-if="showWinner"
+          class="winner-row fs-1 bg-warning bg-gradient text-dark pt-2 pb-3 rounded-5 border border-2 border-light"
+        >
+          <img
+            style="height: 40px; width: 40px"
+            :src="require(`@/assets/images/1.svg`)"
+          />
+          <img
+            class="mx-2"
+            style="height: 40px; width: 40px"
+            :src="require(`@/assets/images/2.svg`)"
+          />
+          الفائز :
+          <span class="winnerName">{{ state[winner].name }}</span>
+          <img
+            class="mx-3"
+            style="height: 40px; width: 40px"
+            :src="require(`@/assets/images/3.svg`)"
+          />
+          <img
+            style="height: 40px; width: 40px"
+            :src="require(`@/assets/images/4.svg`)"
+          />
+        </div>
+      </transition>
       <div class="images">
         <transition-group
           appear
@@ -58,7 +58,7 @@
           class="row mt-5 justify-content-between w-100"
         >
           <div
-            class="position-relative col col-2 fs-1 bg-dark bg-gradient ms-5 text-light pe-5 pt-2 pb-3 rounded-5 border border-2 border-light"
+            class="position-relative col col-2 fs-1 bg-dark bg-gradient marginPlayerOneRight text-light pe-5 pt-0 pb-2 rounded-5 border border-2 border-light"
           >
             {{ state.playerOne.name }}
             <transition
@@ -73,14 +73,14 @@
               ></div>
             </transition>
             <div
-              class="cairo position-absolute top-0 start-100 translate-middle-x totalScoreOne text-dark"
+              class="cairo position-absolute top-0 start-100 translate-middle-x totalScoreOne text-light"
             >
               {{ total.playerOne }}
             </div>
           </div>
 
           <div
-            class="position-relative col col-2 fs-1 bg-dark bg-gradient me-5 text-light ps-5 pt-2 pb-3 rounded-5 border border-2 border-light"
+            class="position-relative col col-2 fs-1 bg-dark bg-gradient marginPlayerTwoLeft text-light ps-5 pt-0 pb-2 rounded-5 border border-2 border-light"
           >
             <transition
               appear
@@ -96,7 +96,7 @@
             {{ state.playerTwo.name }}
 
             <div
-              class="position-absolute top-0 start-0 translate-middle-x cairo totalScoreTwo text-dark"
+              class="position-absolute top-0 start-0 translate-middle-x cairo totalScoreTwo text-light"
             >
               {{ total.playerTwo }}
             </div>
@@ -389,9 +389,15 @@ export default {
 .score-two {
   height: 100px !important;
   width: 100px !important;
-  background-color: #f6b033;
   font-size: larger;
   padding-top: 5px;
+}
+.score-one {
+  background-color: #e4342a;
+}
+
+.score-two {
+  background-color: #f6b033;
 }
 
 .skew-0 {
@@ -414,6 +420,21 @@ export default {
   transition: all 0.5s ease;
 }
 
+.toggle-enter-from,
+.toggle-leave-to {
+  opacity: 0;
+}
+
+.toggle-enter-to,
+.toggle-leave-from {
+  opacity: 1;
+}
+
+.toggle-enter-active,
+.toggle-leave-active {
+  transition: opacity 0.5s ease-in;
+}
+
 html {
   height: 1080px;
   width: 1920px;
@@ -422,7 +443,7 @@ html {
   height: 100px;
   width: 100px;
   margin-top: -11px;
-  padding-top: 17px;
+  padding-top: 15px;
 
   /* background-color: aliceblue; */
 }
@@ -430,7 +451,15 @@ html {
   height: 100px;
   width: 100px;
   margin-top: -11px;
-  padding-top: 17px;
+  padding-top: 15px;
   /* background-color: aliceblue; */
+}
+
+.marginPlayerOneRight {
+  margin-right: 40px;
+}
+
+.marginPlayerTwoLeft {
+  margin-left: 20px;
 }
 </style>
