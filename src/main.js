@@ -7,10 +7,10 @@ import "@/assets/css/fonts.css"
 import "bootstrap-icons/font/bootstrap-icons.css"
 import { projectAuth } from '@/firebase/config'
 
-
 let app
 projectAuth.onAuthStateChanged(() => {
     if (!app) {
         app = createApp(App).use(router).mount('#app')
+        
     }
 })
