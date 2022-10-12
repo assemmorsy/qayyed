@@ -7,13 +7,15 @@
     "build": "vue-cli-service build"
   },
   "dependencies": {
+    "@xstate/vue": "^2.0.0",
     "bootstrap": "^5.2.0",
     "bootstrap-icons": "^1.9.1",
     "core-js": "^3.8.3",
     "firebase": "^9.9.3",
     "gsap": "^3.11.0",
     "vue": "^3.2.13",
-    "vue-router": "^4.0.3"
+    "vue-router": "^4.0.3",
+    "xstate": "^4.33.6"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~5.0.0",

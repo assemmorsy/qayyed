@@ -1,161 +1,392 @@
 <template>
-  <Page>
-    <div>
-      <div class="position-relative row pt-5 justify-content-center mx-auto">
-        <div
-          class="col col-3 bg-grad fs-1 text-light pe-5 pt-2 rounded-5 border border-2 border-light"
-        >
-          {{ state.playerOne.name }}
+  <div ref="parentElm" id="detailed-score">
+    <div id="playerOne">
+      <div class="header">
+        <div class="total-score">
+          <p class="p-0 m-0 pb-1">{{ tweenedScores.playerOne.toFixed(0) }}</p>
+        </div>
+
+        <div class="name">
+          <p>{{ state.playerOne.name }}</p>
         </div>
 
         <div
-          class="position-absolute translate-middle fs-1 pt-4 circle bg-dark bg.gradient text-light rounded-circle border border-2 border-light"
-        >
-          VS
-        </div>
-        <div
-          class="col col-3 bg-grad-reversed fs-1 text-light ps-5 py-2 rounded-5 border border-2 border-light"
-        >
-          {{ state.playerTwo.name }}
-        </div>
+          class="imageContainer"
+          :style="`background-image: url(${state.playerOne.imgUrl});`"
+        ></div>
       </div>
-      <div class="row mt-4 justify-content-center">
-        <transition-group
-          tag="div"
-          appear
-          class="col col-3"
-          @before-enter="scoreBeforeEnter"
-          @enter="scoreEnter"
-        >
-          <p
-            class="fs-2 text-light cairo m-0 p-0"
-            v-for="(score, index) in state.playerOne.scores"
-            :key="index"
-            :data-index="index"
-          >
-            {{ score }}
-          </p>
-        </transition-group>
-        <transition-group
-          tag="div"
-          appear
-          class="col col-3"
-          @before-enter="scoreBeforeEnter"
-          @enter="scoreEnter"
-        >
-          <p
-            class="fs-2 text-light cairo m-0 p-0"
-            v-for="(score, index) in state.playerTwo.scores"
-            :key="index"
-            :data-index="index"
-          >
-            {{ score }}
-          </p>
-        </transition-group>
-      </div>
-      <div
-        class="row mt-3 justify-content-center"
-        v-if="total.playerOne > 0 || total.playerTwo > 0"
-      >
-        <div class="col col-3">
-          <div class="row justify-content-center">
-            <transition
-              appear
-              @before-enter="totalScoreBoxBeforeEnter"
-              @enter="totalScoreBoxEnter"
-              @after-enter="totalScoreBoxBeforeEnter"
-            >
-              <div
-                class="col col-6 fs-2 bg-grad cairo text-light border border-2 border-light"
-              >
-                {{ total.playerOne }}
-              </div>
-            </transition>
-          </div>
-        </div>
 
-        <div class="col col-3">
-          <div class="row justify-content-center">
-            <transition
-              appear
-              @before-enter="totalScoreBoxBeforeEnter"
-              @enter="totalScoreBoxEnter"
-              @after-enter="totalScoreBoxBeforeEnter"
-            >
-              <div
-                class="col col-6 fs-2 bg-grad-reversed cairo text-light border border-2 border-light"
-              >
-                {{ total.playerTwo }}
-              </div>
-            </transition>
-          </div>
-        </div>
+      <div class="detailed-scores">
+        <p
+          v-for="(score, index) in state.playerOne.scores"
+          :key="index"
+          :data-index="index"
+        >
+          {{ score }}
+        </p>
       </div>
     </div>
-  </Page>
+
+    <div id="playerTwo">
+      <div class="header">
+        <div class="total-score">
+          <p class="p-0 m-0 pb-1">{{ tweenedScores.playerTwo.toFixed(0) }}</p>
+        </div>
+        <div class="name">
+          <p>{{ state.playerTwo.name }}</p>
+        </div>
+        <div
+          class="imageContainer"
+          :style="`background-image: url(${state.playerTwo.imgUrl});`"
+        ></div>
+      </div>
+
+      <div class="detailed-scores">
+        <p
+          v-for="(score, index) in state.playerTwo.scores"
+          :key="index"
+          :data-index="index"
+        >
+          {{ score }}
+        </p>
+      </div>
+    </div>
+    <div class="line"></div>
+  </div>
 </template>
 
 <script>
-import gsap from "gsap";
-import Page from "./Page.vue";
+import { ref, onMounted, reactive, watch } from "vue";
+import { gsap } from "gsap";
 export default {
-  props: ["state", "total"],
-  setup() {
-    const scoreBeforeEnter = (el) => {
-      el.style.transform = `translateY(1000px)`;
-      el.opacity = 0;
+  props: ["state", "total", "send", "stateMachine"],
+  setup(props) {
+    const parentElm = ref(null);
+
+    const tweenedScores = reactive({
+      playerOne: 0,
+      playerTwo: 0,
+    });
+    // watch scores for tweening
+    watch(
+      () => [props.total.playerOne, props.total.playerTwo],
+      () => {
+        gsap.to(tweenedScores, {
+          playerOne: props.total.playerOne,
+          playerTwo: props.total.playerTwo,
+          duration: 0.75,
+        });
+      }
+    );
+    const onCompleteEndAnimation = () => {
+      console.log("send FINISH_DETAILED from Detailed");
+      props.send("FINISH_DETAILED");
     };
-    const scoreEnter = (el) => {
-      gsap.to(el, {
-        duration: 0.2,
-        y: "0",
-        x: "0",
-        ease: "power1",
-        opacity: 1,
-        delay: 0.5,
-        // + parseInt(el.dataset.index) * 0.2,
+    let timer = null;
+    const onCompleteStartAnimation = () => {
+      timer = setTimeout(() => {
+        console.log("leaving Details Component");
+        timer = null;
+        scoreUnMount(parentElm.value);
+      }, 4000);
+    };
+
+    const scoreMount = (el) => {
+      const POTotalScore = el.querySelector("#playerOne .total-score");
+      const PTTotalScore = el.querySelector("#playerTwo .total-score");
+      const POName = el.querySelector("#playerOne .name");
+      const PTName = el.querySelector("#playerTwo .name");
+      const POImage = el.querySelector("#playerOne .imageContainer");
+      const PTImage = el.querySelector("#playerTwo .imageContainer");
+      const line = el.querySelector(".line");
+      const POScores = el.querySelector("#playerOne .detailed-scores");
+      const PTScores = el.querySelector("#playerTwo .detailed-scores");
+
+      const t1 = gsap.timeline({
+        onComplete: onCompleteStartAnimation,
       });
-    };
-    const totalScoreBoxBeforeEnter = (el) => {
-      el.style.transform = `translateY(1000px)`;
-      el.opacity = 0;
-    };
-    const totalScoreBoxEnter = (el) => {
-      gsap.to(el, {
+
+      t1.from([POImage, PTImage], {
+        y: -300,
         duration: 0.5,
-        y: "0",
-        ease: "bounce.out",
-        opacity: 1,
-        delay: 0.5,
-        // + state.value.playerOne.scores.length * 0.2,
+        ease: "power4",
       });
+
+      t1.addLabel("move");
+      t1.from(
+        [POTotalScore, PTTotalScore],
+        {
+          y: -300,
+          duration: 0.25,
+          ease: "power4",
+        },
+        "move"
+      );
+      t1.to(
+        tweenedScores,
+        {
+          playerOne: props.total.playerOne,
+          playerTwo: props.total.playerTwo,
+          duration: 0.75,
+        },
+        "move"
+      );
+      t1.to(
+        POImage,
+        {
+          right: "-6.75rem",
+          duration: 1,
+          ease: "power4",
+        },
+        "move"
+      );
+      t1.to(
+        PTImage,
+        {
+          right: "28.25rem",
+          duration: 1,
+          ease: "power4",
+        },
+        "move"
+      );
+      t1.from(
+        PTName,
+        {
+          width: 0,
+          duration: 1,
+          ease: "power4",
+        },
+        "move"
+      );
+      t1.from(
+        POName,
+        {
+          x: "-30rem",
+          width: 0,
+          duration: 1,
+          ease: "power4",
+        },
+        "move"
+      );
+      t1.addLabel("showAll");
+      t1.from(
+        PTScores.children,
+        {
+          duration: 0.75,
+          scale: 0.5,
+          opacity: 0,
+          stagger: 0.1,
+          ease: "elastic",
+        },
+        "showAll"
+      );
+      t1.from(
+        POScores.children,
+        {
+          duration: 0.75,
+          scale: 0.5,
+          opacity: 0,
+          stagger: 0.1,
+          ease: "elastic",
+        },
+        "showAll"
+      );
+      t1.from(
+        line,
+        {
+          height: 0,
+          duration: 0.25,
+        },
+        "showAll"
+      );
+
+      t1.to(
+        [POName.children, PTName.children],
+        {
+          opacity: 1,
+          duration: 0.25,
+        },
+        "showAll"
+      );
     };
-    return {
-      scoreEnter,
-      scoreBeforeEnter,
-      totalScoreBoxBeforeEnter,
-      totalScoreBoxEnter,
+
+    const scoreUnMount = (el) => {
+      const PO = el.querySelector("#playerOne ");
+      const PT = el.querySelector("#playerTwo ");
+      const line = el.querySelector(".line");
+      const POScores = el.querySelector("#playerOne .detailed-scores");
+      const PTScores = el.querySelector("#playerTwo .detailed-scores");
+
+      const t1 = gsap.timeline({
+        onComplete: onCompleteEndAnimation,
+      });
+      t1.to(
+        line,
+        {
+          height: 0,
+          duration: 0.3,
+        },
+        "<"
+      );
+      t1.to(
+        POScores.children,
+        {
+          duration: 0.75,
+          scale: 0.5,
+          opacity: 0,
+          stagger: 0.1,
+          ease: "elastic",
+        },
+        "<"
+      );
+      t1.to(
+        PTScores.children,
+        {
+          duration: 0.75,
+          scale: 0.5,
+          opacity: 0,
+          stagger: 0.1,
+          ease: "elastic",
+        },
+        "<"
+      );
+      t1.to(
+        [PO, PT],
+        {
+          duration: 0.25,
+          y: -300,
+        },
+        ">"
+      );
     };
+
+    onMounted(() => {
+      console.log("entering Details Component");
+      scoreMount(parentElm.value);
+    });
+
+    watch(
+      () => [props.total],
+      () => {
+        if (props.state && timer) {
+          console.log("wait 4000 s ");
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            console.log("leaving Details Component after waiting +4s ...");
+            timer = null;
+            scoreUnMount(parentElm.value);
+          }, 3000);
+        }
+      }
+    );
+
+    return { parentElm, tweenedScores };
   },
-  components: { Page },
 };
 </script>
 
 <style scoped>
-.circle {
-  height: 120px !important;
-  width: 120px !important;
-  top: 70%;
-  left: 44%;
+#detailed-score {
+  font-family: "CairoSemiBold";
+  padding-top: var(--detail-header-height);
+  color: aliceblue;
+  font-size: 2.7rem;
+  display: flex;
+  justify-content: space-around;
+}
+.header {
+  height: var(--detail-margin);
+  width: var(--detail-header-width);
+  position: relative;
+}
+.imageContainer {
+  height: var(--detail-radius);
+  width: var(--detail-radius);
+  border-radius: 30px;
+  position: absolute;
+  top: calc((var(--detail-radius) - var(--detail-header-height)) / -2);
+  border: #f6b033 solid 2px;
+}
+#playerOne .imageContainer {
+  left: calc(
+    ((var(--detail-radius) - var(--detail-header-height)) / 2) -
+      var(--detail-radius)
+  );
+  transform: skewX(-10deg);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+#playerTwo .imageContainer {
+  right: -6.75rem;
+  transform: skewX(10deg);
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
-.bg-grad {
-  background: linear-gradient(-45deg, #e4342a, #f6b033);
+.name {
+  height: var(--detail-header-height);
+  width: var(--detail-header-width);
+  margin: 0px;
 }
-.bg-grad-reversed {
-  background: linear-gradient(-45deg, #f6b033, #e4342a);
+.name p {
+  opacity: 0;
 }
-.cairo {
-  font-family: "CairoSemiBold";
+#playerOne .name {
+  background-image: linear-gradient(to right, #e4342a, #f6b033);
+}
+
+#playerTwo .name {
+  background-image: linear-gradient(to right, #e4342a, #f6b033);
+}
+
+.total-score {
+  height: var(--detail-radius);
+  width: var(--detail-radius);
+  border-radius: 30px;
+  position: absolute;
+  top: calc((var(--detail-radius) - var(--detail-header-height)) / -2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  border: whitesmoke solid 3px;
+  z-index: 5;
+}
+#playerOne .total-score {
+  background-color: #e4342a;
+  left: calc(
+    ((var(--detail-radius) - var(--detail-header-height)) / 2) -
+      var(--detail-radius)
+  );
+  transform: skewX(10deg);
+}
+#playerTwo .total-score {
+  background-color: #f6b033;
+  right: calc(
+    ((var(--detail-radius) - var(--detail-header-height)) / 2) -
+      var(--detail-radius)
+  );
+  transform: skewX(-10deg);
+}
+#playerOne .total-score p {
+  transform: skewX(-10deg);
+}
+#playerTwo .total-score p {
+  transform: skewX(10deg);
+}
+.detailed-scores {
+  margin-top: 20px;
+}
+.detailed-scores p {
+  margin: -13px 0px;
+  font-size: 3rem;
+}
+.line {
+  position: absolute;
+  top: 25%;
+  height: 60%;
+  width: 1rem;
+  background-image: linear-gradient(to top right, #e4342a, #f6b033);
+  border-radius: 20px;
 }
 </style>

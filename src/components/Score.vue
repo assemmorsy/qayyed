@@ -1,123 +1,233 @@
 <template>
-  <Page>
-    <div class="row pt-5 justify-content-between w-100">
-      <div
-        class="position-relative col col-2 fs-1 bg-dark bg-gradient height-of-col marginPlayerOneRight text-light pe-5 pt-0 pb-2 rounded-5 border border-2 border-light"
-      >
-        {{ playerOneName }}
-        <transition
-          appear
-          @before-enter="totalScoreBeforeEnter"
-          @enter="totalScoreEnter"
-          @after-leave="totalScoreBeforeEnter"
-        >
-          <div
-            data-dir="-1"
-            class="position-absolute top-50 start-100 border score-one border-2 border-light rounded-4"
-          ></div>
-        </transition>
-        <div
-          class="cairo position-absolute top-0 start-100 translate-middle-x totalScoreOne text-light"
-        >
-          {{ playerOneTotalScore }}
+  <div ref="parentElm" class="score-style">
+    <div class="playerOne">
+      <div id="playerOneElm" class="bg-dark bg-gradient">
+        <div class="centerPlayerOne">
+          <p>{{ playerOneName }}</p>
         </div>
       </div>
 
-      <div
-        class="position-relative col col-2 fs-1 bg-dark bg-gradient height-of-col marginPlayerTwoLeft text-light ps-5 pt-0 pb-2 rounded-5 border border-2 border-light"
-      >
-        <transition
-          appear
-          @before-enter="totalScoreBeforeEnter"
-          @enter="totalScoreEnter"
-          @after-leave="totalScoreBeforeEnter"
-        >
-          <div
-            data-dir="1"
-            class="position-absolute top-50 start-0 score-two border border-2 border-light rounded-4"
-          ></div>
-        </transition>
-        {{ playerTwoName }}
+      <div id="playerOneScoreElm" data-dir="-1">
+        <p class="totalScoreOne">
+          {{ tweenedScores.playerOne.toFixed(0) }}
+        </p>
+      </div>
+    </div>
 
-        <div
-          class="position-absolute top-0 start-0 translate-middle-x cairo totalScoreTwo text-light"
-        >
-          {{ playerTwoTotalScore }}
+    <div class="playerTwo">
+      <div id="playerTwoScoreElm" data-dir="1">
+        <p class="totalScoreTwo">
+          {{ tweenedScores.playerTwo.toFixed(0) }}
+        </p>
+      </div>
+      <div id="playerTwoElm" class="bg-dark bg-gradient">
+        <div class="centerPlayerTwo">
+          <p>{{ playerTwoName }}</p>
         </div>
       </div>
     </div>
-  </Page>
+  </div>
 </template>
 
 <script>
 import gsap from "gsap";
-import Page from "@/components/Page.vue";
+import { reactive, watch, onMounted, ref } from "vue";
 export default {
-  components: { Page },
   props: [
     "playerOneName",
     "playerTwoName",
     "playerOneTotalScore",
     "playerTwoTotalScore",
+    "hide",
+    "send",
   ],
-  setup() {
-    const totalScoreBeforeEnter = (el) => {
-      el.style.transform = ` translate(50% , -60px) skewX(${
-        parseInt(el.dataset.dir) * 20
-      }deg)`;
+  setup(props) {
+    const tweenedScores = reactive({
+      playerOne: 0,
+      playerTwo: 0,
+    });
+    // watch scores for tweening
+    watch(
+      () => [props.playerOneTotalScore, props.playerTwoTotalScore],
+      () => {
+        gsap.to(tweenedScores, {
+          playerOne: props.playerOneTotalScore,
+          playerTwo: props.playerTwoTotalScore,
+          duration: 0.75,
+        });
+      }
+    );
+
+    const parentElm = ref(null);
+
+    const onComplete = () => {
+      console.log("send SCORE_INCREASED from Score");
+      props.send("SCORE_INCREASED");
     };
 
-    const totalScoreEnter = (el) => {
-      gsap.to(el, {
+    const scoreMount = (el) => {
+      const t1 = gsap.timeline();
+      const playerOneElm = el.querySelector("#playerOneElm");
+      const playerTwoElm = el.querySelector("#playerTwoElm");
+      const playerOneScoreElm = el.querySelector("#playerOneScoreElm");
+      const playerTwoScoreElm = el.querySelector("#playerTwoScoreElm");
+
+      t1.set([playerOneElm, playerTwoElm], {
+        opacity: 0,
+      });
+      t1.from([playerOneScoreElm, playerTwoScoreElm], {
         duration: 1,
-        y: "-50%",
-        x: "50%",
+        y: -200,
+        ease: "power2",
+      });
+      t1.to(tweenedScores, {
+        playerOne: props.playerOneTotalScore,
+        playerTwo: props.playerTwoTotalScore,
+        duration: 0.75,
+      });
+      t1.set([playerOneElm, playerTwoElm], {
+        opacity: 1,
+      });
+
+      t1.from([playerOneElm, playerTwoElm], {
+        duration: 1,
+        width: 0,
         ease: "bounce.out",
+      });
+      t1.from([playerOneElm.children, playerTwoElm.children], {
+        duration: 0.25,
+        opacity: 0,
       });
     };
 
-    return { totalScoreBeforeEnter, totalScoreEnter };
+    const scoreUnMount = (el) => {
+      const t2 = gsap.timeline({
+        onComplete: onComplete,
+      });
+      const playerOne = el.querySelector(".playerOne");
+      const playerTwo = el.querySelector(".playerTwo");
+      t2.to([playerOne, playerTwo], {
+        duration: 0.5,
+        x: (dir) => {
+          return dir === 0 ? 500 : -500;
+        },
+        ease: "linear",
+      });
+    };
+
+    onMounted(() => {
+      console.log("entering Score Component");
+      scoreMount(parentElm.value);
+    });
+
+    watch(
+      () => props.hide,
+      () => {
+        if (props.hide) {
+          console.log("leaving Score Component");
+          scoreUnMount(parentElm.value);
+        }
+      }
+    );
+
+    return {
+      tweenedScores,
+      parentElm,
+    };
   },
 };
 </script>
 
 <style scoped>
-.cairo {
+.score-style {
+  color: aliceblue;
+  width: 100vw;
   font-family: "CairoSemiBold";
+  font-size: 2.4rem;
+}
+.playerOne,
+.playerTwo {
+  position: fixed;
+  top: var(--score-margin);
+  height: var(--score-height);
+  width: var(--score-width);
+}
+.playerOne {
+  right: var(--score-margin);
+}
+.playerTwo {
+  left: var(--score-margin);
+}
+#playerOneElm p,
+#playerTwoElm p {
+  padding: 0 0 0.5rem 0;
+  margin: 0px;
 }
 
-.score-one,
-.score-two {
-  height: 100px !important;
-  width: 100px !important;
-  font-size: larger;
-  padding-top: 5px;
+#playerOneElm,
+#playerTwoElm {
+  height: var(--score-height);
+  width: var(--score-width);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.score-one {
+
+#playerOneElm {
+  position: absolute;
+  left: calc((var(--score-radius) / 2) - var(--score-overlap));
+  border-radius: 0px 50px 15px 0px;
+}
+#playerTwoElm {
+  position: absolute;
+  right: calc((var(--score-radius) / 2) - var(--score-overlap));
+  border-radius: 50px 0px 0px 15px;
+}
+
+.centerPlayerOne,
+.centerPlayerTwo {
+  position: absolute;
+  height: var(--score-height);
+  width: calc(var(--score-width) - (var(--score-radius) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.centerPlayerOne {
+  left: var(--score-overlap);
+}
+.centerPlayerTwo {
+  right: var(--score-overlap);
+}
+
+#playerOneScoreElm,
+#playerTwoScoreElm {
+  height: var(--score-radius);
+  width: var(--score-radius);
+  position: absolute;
+  top: calc((var(--score-radius) - var(--score-height)) / -2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5;
+}
+#playerOneScoreElm {
   background-color: #e4342a;
+  left: -3.5rem;
+  border-radius: 15px 50px;
 }
-
-.score-two {
+#playerTwoScoreElm {
   background-color: #f6b033;
+  right: -3.5rem;
+  border-radius: 50px 15px;
 }
 
 .totalScoreOne,
 .totalScoreTwo {
-  height: 100px;
-  width: 100px;
-  margin-top: -11px;
-  padding-top: 15px;
-  background-color: rgba(0, 0, 0, 0);
-}
-
-.marginPlayerOneRight {
-  margin-right: 40px;
-}
-
-.marginPlayerTwoLeft {
-  margin-left: 20px;
-}
-.height-of-col {
-  height: 4.75rem;
+  padding: 0px;
+  margin: 0px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 2.7rem;
+  font-weight: 900;
 }
 </style>

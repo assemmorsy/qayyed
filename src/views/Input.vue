@@ -13,6 +13,18 @@
         <p class="total text-light">
           {{ total.playerOne }}
         </p>
+        <div class="mb-3">
+          <input
+            class="form-control"
+            type="file"
+            @change="handleFileChange('playerOneImg', $event)"
+          />
+        </div>
+        <img
+          v-if="state.playerOne.imgUrl !== ''"
+          :src="state.playerOne.imgUrl"
+          style="height: 100px; width: 100px"
+        />
       </div>
 
       <div class="mb-3 col col-5 justify-content-center">
@@ -25,6 +37,18 @@
         <p class="total text-light">
           {{ total.playerTwo }}
         </p>
+        <div class="mb-3">
+          <input
+            class="form-control"
+            type="file"
+            @change="handleFileChange('playerTwoImg', $event)"
+          />
+        </div>
+        <img
+          v-if="state.playerTwo.imgUrl != ''"
+          :src="state.playerTwo.imgUrl"
+          style="height: 100px; width: 100px"
+        />
       </div>
 
       <div class="position-absolute top-100 start-50 translate-middle">
@@ -171,16 +195,16 @@ import useLogout from "@/composables/useLogout.js";
 import useDocument from "@/composables/useDocument";
 import getDocument from "@/composables/getDocument";
 import { useRouter } from "vue-router";
-import { async } from "@firebase/util";
+import useStorage from "@/composables/useStorage";
 export default {
   setup() {
     const router = useRouter();
     const { error: logoutError, loading: logoutLoading, logout } = useLogout();
     const WiNNING_SCORE = 152;
     const qayyedError = ref(null);
-    const { error, isPending, updateDoc } = useDocument("game", "1");
-    const { error: getDocError, document } = getDocument("game", "1");
-
+    const { updateDoc } = useDocument("game", "1");
+    const { document } = getDocument("game", "1");
+    const { error, url, filePath, uploadImage, deleteImage } = useStorage();
     const tempScores = ref({
       playerOne: "",
       playerTwo: "",
@@ -189,15 +213,18 @@ export default {
       playerOne: {
         name: "لنا",
         scores: [],
+        imgPath: "",
+        imgUrl: "",
       },
       playerTwo: {
         name: "لهم",
         scores: [],
+        imgPath: "",
+        imgUrl: "",
       },
       isChanged: false,
       show: true,
     });
-
     const total = computed(() => {
       let playerOne = state.value.playerOne.scores.reduce(
         (s1, s2) => s1 + s2,
@@ -228,14 +255,52 @@ export default {
         }
       }
     });
+
+    const handleFileChange = async (name, e) => {
+      const selected = e.target.files[0];
+      switch (name) {
+        case "playerOneImg":
+          try {
+            if (state.value.playerOne.imgPath !== "") {
+              await deleteImage(state.value.playerOne.imgPath);
+            }
+            await uploadImage(selected);
+            if (!error.value) {
+              state.value.playerOne.imgPath = filePath.value;
+              state.value.playerOne.imgUrl = url.value;
+              await updateName();
+            }
+          } catch (err) {
+            console.log(error.value);
+            console.log(err);
+          }
+          break;
+        case "playerTwoImg":
+          try {
+            if (state.value.playerTwo.imgPath !== "") {
+              await deleteImage(state.value.playerTwo.imgPath);
+            }
+            await uploadImage(selected);
+            if (!error.value) {
+              state.value.playerTwo.imgPath = filePath.value;
+              state.value.playerTwo.imgUrl = url.value;
+              await updateName();
+            }
+          } catch (err) {
+            console.log(error.value);
+            console.log(err);
+          }
+          break;
+      }
+    };
     const updateName = async () => {
       await updateDoc(state.value);
     };
-
     const toggleShow = async () => {
       state.value.show = !state.value.show;
       await updateDoc(state.value);
     };
+
     watchEffect(() => {
       if (document.value) {
         state.value.playerOne = document.value.playerOne;
@@ -325,6 +390,7 @@ export default {
         qayyedError.value = "برجاء ادخال النتيجة اقل من او تساوى 300";
       }
     };
+
     return {
       toggleShow,
       updateName,
@@ -341,6 +407,7 @@ export default {
       handleQayyed,
       qayyedError,
       winner,
+      handleFileChange,
     };
   },
 };

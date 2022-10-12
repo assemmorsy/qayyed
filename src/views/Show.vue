@@ -3,28 +3,20 @@
     v-if="state && state.show"
     class="position-relative text-center h-100 w-100"
   >
-    <Winner
-      v-if="!state.isChanged && showWinner"
-      :winnerName="state[winner].name"
-    />
-    <DetailedScore
-      v-if="state.isChanged && !showWinner"
-      :state="state"
-      :total="total"
-    />
-    <Score
-      v-if="!state.isChanged && !showWinner"
-      :playerOneName="state.playerOne.name"
-      :playerTwoName="state.playerTwo.name"
-      :playerOneTotalScore="total.playerOne"
-      :playerTwoTotalScore="total.playerTwo"
-    />
+    <component
+      :is="COMPS[stateMachine.value].comp"
+      v-bind="COMPS[stateMachine.value].props"
+    ></component>
   </div>
 </template>
 
 <script>
-import { computed, watchEffect, ref } from "vue";
+import { computed, watch, ref } from "vue";
+import { useMachine } from "@xstate/vue";
+
 import getDocument from "@/composables/getDocument";
+import { showMachine } from "@/composables/showMachine";
+
 import Score from "@/components/Score.vue";
 import Winner from "@/components/Winner.vue";
 import DetailedScore from "@/components/DetailedScore.vue";
@@ -32,7 +24,6 @@ import DetailedScore from "@/components/DetailedScore.vue";
 export default {
   setup() {
     const { error, document: state } = getDocument("game", "1");
-    const showWinner = ref(false);
     const WINNING_SCORE = 152;
 
     const total = computed(() => {
@@ -66,27 +57,77 @@ export default {
         }
       }
     });
-
-    watchEffect(() => {
-      if (state.value) {
-        if (
-          (winner.value === "playerOne" || winner.value === "playerTwo") &&
-          !state.value.isChanged
-        ) {
-          showWinner.value = true;
-          setTimeout(() => {
-            showWinner.value = false;
-          }, 6500);
-        }
-      }
+    const hideScore = ref(false);
+    const COMPS = computed(() => {
+      if (state.value)
+        return {
+          Score: {
+            comp: Score,
+            props: {
+              playerOneName: state.value.playerOne.name,
+              playerTwoName: state.value.playerTwo.name,
+              playerOneTotalScore: total.value.playerOne,
+              playerTwoTotalScore: total.value.playerTwo,
+              hide: hideScore.value,
+              send: send,
+            },
+          },
+          DetailedScore: {
+            comp: DetailedScore,
+            props: {
+              state: state.value,
+              total: total.value,
+              send: send,
+              stateMachine: stateMachine.value,
+            },
+          },
+          Winner: {
+            comp: Winner,
+            props: {
+              winner: state.value[winner.value],
+              send: send,
+            },
+          },
+        };
     });
 
+    const { state: stateMachine, send } = useMachine(showMachine, {
+      guards: {
+        hasWinner: () => {
+          console.log("checking winner");
+          return winner.value !== null;
+        },
+      },
+      actions: {
+        showScore: () => {
+          hideScore.value = false;
+        },
+      },
+    });
+
+    watch(
+      () => [total.value, state.value],
+      (newVal, oldVal) => {
+        if (
+          oldVal[1] !== null &&
+          (newVal[0].playerOne > oldVal[0].playerOne ||
+            newVal[0].playerTwo > oldVal[0].playerTwo) &&
+          stateMachine.value.value === "Score"
+        ) {
+          console.log("start end transition of the score");
+          hideScore.value = true;
+        }
+      }
+    );
+
     return {
+      stateMachine,
+      send,
       error,
       state,
-      showWinner,
       winner,
       total,
+      COMPS,
     };
   },
   components: { Score, Winner, DetailedScore },
@@ -95,6 +136,8 @@ export default {
 
 <style scoped>
 * {
+  /* background-color: rgba(0, 0, 0,0); */
+
   background-color: rgba(0, 177, 64);
   height: 1080px;
   width: 1920px;
